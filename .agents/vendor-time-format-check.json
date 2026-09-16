@@ -1,0 +1,51 @@
+{
+  "method": "Original EXE time formatter emulated up to QString formatting call; no vendor application executed",
+  "rva": "0xe1a0..0xe232",
+  "checks": [
+    {
+      "input": 59,
+      "days_hours_minutes_seconds": [
+        0,
+        0,
+        0,
+        59
+      ]
+    },
+    {
+      "input": 60,
+      "days_hours_minutes_seconds": [
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "input": 3600,
+      "days_hours_minutes_seconds": [
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "input": 86400,
+      "days_hours_minutes_seconds": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "input": 90061,
+      "days_hours_minutes_seconds": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

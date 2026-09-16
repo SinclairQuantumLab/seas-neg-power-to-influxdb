@@ -81,6 +81,11 @@ accepted TCP unit IDs have not been tested. Use the unit's configured port and I
 
 ## Recovered monitoring map
 
+Follow-up (2026-09-16 UTC): the live read-only and additional vendor-code findings
+in [validation notes](../.agents/VALIDATION.md) supersede the unresolved version,
+time-unit and selected state/alarm descriptions in the original table below.
+Detailed evidence is recorded at the end of this document.
+
 `processMBReply` is at DLL RVA `0x1fc0`. It checks both the starting address and
 the expected response length. The main 14-register decoder is at `0x24a9`.
 
@@ -188,3 +193,43 @@ data. These paths preserve existing links without duplicating the documents.
 The Codex project's stored root has not been changed; select the canonical
 directory when opening the project again. No local Git repository or GitHub
 repository existed for this project at the time of the rename.
+
+## Live interpretation follow-up: 2026-09-16 UTC
+
+Read-only FC03 polling succeeded at the user-supplied `192.168.50.35:502`, unit
+ID 1. The main relay ran with `--once --dry-run`, followed by three source polls.
+No writes, alarm resets, heating commands or InfluxDB uploads were issued.
+See `.agents/live-readonly-samples.json` for the samples and `.agents/VALIDATION.md`
+for the failed hostname attempt and exact conditions. The following evidence
+uses the same vendor binaries whose hashes are recorded above.
+
+- **Firmware:** EXE `0x85c9..0x8771` extracts the low byte, middle byte and high
+  16 bits, then joins them as high16.middle8.low8. Thus the observed register
+  pair combined as 65536 (`0x00010000`) displays `1.0.0`.
+- **Status:** DLL `0x6930` retains codes 1..5 (others become 0). EXE `0xe490`
+  dispatches through the jump table at `0x312f8`: 0/1 unknown, 2 standby,
+  3 ramp, 4 steady, 5 alarm, 6 offline. Code 6 is synthesized by the Manager
+  when communication is absent (`getStatus`, DLL `0x9100`); it must not be
+  described as a verified device register code. The live register was 2.
+- **Time:** `getOntime` and `getUptime` feed EXE `0xe1a0` at call sites `0x8d04`
+  and `0x8d53`. Its format string at `0x312b0` is `%ud-%02uh:%02um:%02us`, with
+  divisions by 86400, 3600 and 60. Emulating the original formatter up to its
+  QString call at `0xe232` verified inputs 59, 60, 3600, 86400 and 90061 seconds;
+  results are in `.agents/vendor-time-format-check.json`. Live uptime increased
+  by 11 over about 10.4 seconds, consistent with whole-second quantization.
+  Active time remained zero; its reset/persistence behavior was not exercised.
+- **Alarm bits:** DLL `isAlarm(Alarms)` at `0x9b40` tests `(flags >> index) & 1`.
+  EXE `0x8e31..0x8f44` passes indices to widgets, whose labels are assigned at
+  `0x1cb12..0x1cd23`: bit 0 overcurrent, 1 overvoltage, 2 undervoltage, 3 pump
+  open, 6 interlock, 7 pump overtemperature, 8 VMonitor. Other bit meanings
+  remain unknown. Only the no-latched-alarm value 0 was observed live.
+- **Temperature fault:** live flags were 16 (bit 4), pump register 273 K, with
+  the pump cable reportedly disconnected. Missing/open thermocouple is an
+  inference, not an identified vendor enumeration or a controlled fault test.
+  Both temperature fields continue to be recorded without rejection.
+- **USB:** live code 2 with no USB memory stick, as confirmed by the user.
+  Likely no storage / logging inactive, but not distinguishable without a
+  comparison with media inserted. USB logging is independent of Modbus TCP.
+
+README keeps these interpretations in its existing Meaning column. Raw field
+names and runtime behavior are unchanged; estimates are marked `(Inferred)`.
