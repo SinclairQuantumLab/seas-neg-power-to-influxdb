@@ -124,6 +124,12 @@ separated by runs lasting at least 30 seconds. Start the
 relay manually after restoring the controller. Apply these settings to an
 already-installed Supervisor entry; repository templates do not update it.
 
+`Ctrl+C` (SIGINT) and SIGTERM use Python's `signal.default_int_handler`:
+they interrupt the current read, upload, or sleep through `KeyboardInterrupt`
+and run the existing `finally` cleanup (exit code 130). Shutdown does not wait
+for a complete polling cycle. An interrupted upload may already have reached
+InfluxDB; it is not retried during shutdown.
+
 Stop with `Ctrl+C`. Normal shutdown releases source and InfluxDB resources.
 Supervisor owns stdout/stderr logs; there is no separate measurement log.
 Each successful upload prints uptime (s), status, pump temperature (°C), heater

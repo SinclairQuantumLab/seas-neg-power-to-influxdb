@@ -141,3 +141,21 @@ Canonical working directory is
 `C:\Users\Joon\Projects\seas-neg-power-to-influxdb`. The older MINI-named path is
 a junction. The original active-thread root contains only the document junction;
 execute future development commands with the canonical directory explicitly.
+
+
+## 2026-09-16 standard signal shutdown
+
+The user authorized replacing synchronous signal-handler `threading.Event`
+coordination with `signal.default_int_handler` for SIGINT and SIGTERM.
+Both now interrupt reads, uploads, and `time.sleep` through `KeyboardInterrupt`,
+run existing `finally` cleanup, and exit 130 without polling retries. Source
+protocols, schema, normal scheduling, and ordinary failure policies are unchanged.
+
+- `uv run --no-sync python -m pytest -q`: 34 passed.
+- Six new cases invoke the registered handler during acquisition, upload, and
+  sleep for each signal; they verify cleanup and absence of source retry.
+- Ruff and Git whitespace checks passed.
+- Tests use synthetic source and InfluxDB boundaries. No live device connection,
+  upload, startup wrapper, service restart, or deployed configuration change was
+  performed for this task. Windows service signal delivery is not qualified by
+  these in-process handler tests.

@@ -3,7 +3,7 @@
 import runpy
 import signal
 import sys
-import threading
+import time
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -74,6 +74,8 @@ def run_relay(
     dry_run: bool = False,
     once: bool = True,
     fail_write: bool = False,
+    signal_at: str | None = None,
+    signum: int = signal.SIGTERM,
 ) -> tuple[int, list[dict[str, object]], list[str]]:
     """Run main.py in a temporary deployment without reading real credentials."""
     monkeypatch.chdir(tmp_path)
@@ -83,8 +85,20 @@ def run_relay(
     records: list[dict[str, object]] = []
     closed: list[str] = []
 
+    handlers = {}
+
+    def interrupt(*args: object, **kwargs: object) -> None:
+        """Invoke the selected handler installed by production code."""
+        assert handlers[signum] is signal.default_int_handler
+        handlers[signum](signum, None)
+
+    if signal_at == "read":
+        monkeypatch.setattr(client, "read_sample", interrupt)
+
     def write(**kwargs: object) -> None:
         """Capture a write, or model an unavailable InfluxDB server."""
+        if signal_at == "upload":
+            interrupt()
         if fail_write:
             raise RuntimeError("synthetic write failure")
         assert kwargs["bucket"] == "test-bucket"
@@ -109,17 +123,10 @@ def run_relay(
         )
     monkeypatch.setattr(influxdb_client, "InfluxDBClient", influx_factory)
     monkeypatch.setattr(source, "SAESNEGPowerMiniClient", lambda settings: client)
-    waits: list[float] = []
     monkeypatch.setattr(
-        threading,
-        "Event",
-        lambda: SimpleNamespace(
-            is_set=lambda: len(waits) >= 8,
-            set=lambda: None,
-            wait=lambda seconds: waits.append(seconds),
-        ),
+        time, "sleep", interrupt if signal_at == "sleep" else lambda _: None
     )
-    monkeypatch.setattr(signal, "signal", lambda *args: None)
+    monkeypatch.setattr(signal, "signal", handlers.__setitem__)
     args = [str(SCRIPT), "--settings", str(tmp_path / "settings.toml")]
     if once:
         args.append("--once")
@@ -174,7 +181,10 @@ def test_schema_and_cleanup(
     assert "PumpTemperature[°C]=-0.15" in wire
     assert "InternalTemperature[°C]=26.85" in wire
     assert 'Status="Steady"' in wire
-    assert "Uptime[s]=123, Status=Steady, PumpTemperature[°C]=-0.15" in capsys.readouterr().out
+    assert (
+        "Uptime[s]=123, Status=Steady, PumpTemperature[°C]=-0.15"
+        in capsys.readouterr().out
+    )
     assert "Pressure" not in wire and "Serial" not in wire
 
 
@@ -223,3 +233,26 @@ def test_write_failure_does_not_retry_source(
     code, records, closed = run_relay(monkeypatch, tmp_path, client, fail_write=True)
     assert code == 1 and not records and client.reconnections == 0
     assert client.closed and closed == ["writer", "influx"]
+
+
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM])
+@pytest.mark.parametrize("phase", ["read", "upload", "sleep"])
+def test_termination_interrupts_work_and_closes_resources(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    signum: int,
+    phase: str,
+) -> None:
+    """Termination must bypass retries and release the source and both DB handles."""
+    client = FakeClient([SAMPLE])
+    code, records, closed = run_relay(
+        monkeypatch,
+        tmp_path,
+        client,
+        once=False,
+        signal_at=phase,
+        signum=signum,
+    )
+    assert code == 130 and client.closed and closed == ["writer", "influx"]
+    assert len(records) == (1 if phase == "sleep" else 0)
+    assert client.reconnections == 0
