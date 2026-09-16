@@ -46,6 +46,15 @@ differs in Startup.sh only. This task did not alter or pull the user's SIP tree.
 - Kept the simple f0ba1e4 shell launcher, also present in Siglent/5c478e1 and
   HiCube/2574129. Remote SIP's a8e35bd interactive terminal/SN parsing additions
   are not needed by this Supervisor-managed source.
+- User later rejected indefinite restart for the intermittently powered NEG
+  controller. Both Supervisor templates retain startretries=5 and use
+  autorestart=unexpected with startsecs=30. The settings template now matches
+  the user's actual interval_s=1. Existing relay lifetime threshold
+  and single reconnect/retry remain. Following a runtime failure, persistent
+  controller unavailability causes restarted runs to fail during STARTING,
+  exhausting startretries. This is not a lifetime restart cap. User explicitly
+  preferred basic Supervisor configuration over an additional restart counter.
+  Reference: https://docs.supervisord.org/configuration.html
 - Source difference: MINI uses TCP FC03 and several register blocks, replacing
   SIP UDP/Read All entirely. Implemented only this small read subset with Python
   sockets, following SIP's self-contained source-client boundary. Partial TCP
@@ -61,9 +70,16 @@ differs in Startup.sh only. This task did not alter or pull the user's SIP tree.
   path for later multichannel records. This is new NEG schema, not a universal
   Sinclair tag contract. Endpoint changes create different series.
 - State/alarm/timing/sensor values with incomplete semantics remain Raw integers.
-  No physical PumpTemperature field is exposed before sensor validity is known.
+  At the user's subsequent request, temperature registers are interpreted as
+  kelvin and uploaded in Celsius. PumpTemperatureRaw remains alongside the
+  conversion; no sensor-validity claim or sentinel filtering is added.
   Current is heater amperes, not SIP nanoamperes. Electrical display rounding is
   recovered from vendor code; raw register counts are retained alongside it.
+- Follow-up: user requested a string Status field and second-position stdout
+  status. SourceSample.status maps vendor-confirmed codes 2..5 to names and
+  uses Unknown otherwise for stdout. Per user follow-up, unknown codes omit the
+  uploaded Status field while preserving StatusRaw and all readings. Evidence: MINI map's
+  live interpretation follow-up, DLL 0x6930/0x9100 and EXE 0xe490.
 - Identity + status are mandatory. Work-time extension is read only for firmware
   >0x200. Any required-block failure rejects the entire poll. Configuration reads
   and all writes were deliberately omitted from this initial monitoring scope.
