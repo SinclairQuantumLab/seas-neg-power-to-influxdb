@@ -4,6 +4,7 @@ import runpy
 import signal
 import sys
 import threading
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,7 +23,7 @@ SAMPLE = source.SourceSample(
     2,
     123,
     300,
-    65535,
+    273,
     1234,
     456,
     12.3,
@@ -133,7 +134,9 @@ def run_relay(
     return code, records, closed
 
 
-def test_schema_and_cleanup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_schema_and_cleanup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Check endpoint/channel identity and avoid interpreting unverified fields."""
     client = FakeClient([SAMPLE])
     code, records, closed = run_relay(monkeypatch, tmp_path, client)
@@ -152,10 +155,12 @@ def test_schema_and_cleanup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
         "SoftwareVersionRaw": 512,
         "HardwareRevision": "1.2",
         "StatusRaw": 4,
+        "Status": "Steady",
         "USBLoggingStatusRaw": 2,
         "UptimeRaw": 123,
-        "InternalTemperature[K]": 300,
-        "PumpTemperatureRaw": 65535,
+        "InternalTemperature[°C]": 26.85,
+        "PumpTemperature[°C]": -0.15,
+        "PumpTemperatureRaw": 273,
         "OutputVoltageRaw": 1234,
         "OutputCurrentRaw": 456,
         "OutputVoltage[V]": 12.3,
@@ -165,8 +170,24 @@ def test_schema_and_cleanup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
         "TemperatureErrorFlagsRaw": 1,
     }
     wire = influxdb_client.Point.from_dict(record).to_line_protocol()
-    assert "OutputCurrent[A]=4.6" in wire and "PumpTemperatureRaw=65535i" in wire
+    assert "OutputCurrent[A]=4.6" in wire and "PumpTemperatureRaw=273i" in wire
+    assert "PumpTemperature[°C]=-0.15" in wire
+    assert "InternalTemperature[°C]=26.85" in wire
+    assert 'Status="Steady"' in wire
+    assert "Uptime[s]=123, Status=Steady, PumpTemperature[°C]=-0.15" in capsys.readouterr().out
     assert "Pressure" not in wire and "Serial" not in wire
+
+
+def test_unknown_status_preserves_raw(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Omit unknown status text while still uploading the raw code and readings."""
+    client = FakeClient([replace(SAMPLE, status_raw=6)])
+    code, records, _ = run_relay(monkeypatch, tmp_path, client)
+    assert code == 0
+    assert "Status" not in records[0]["fields"]
+    assert records[0]["fields"]["StatusRaw"] == 6
+    assert records[0]["fields"]["PumpTemperature[°C]"] == -0.15
 
 
 def test_dry_run_needs_no_auth(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

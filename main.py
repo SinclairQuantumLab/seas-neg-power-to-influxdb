@@ -134,7 +134,8 @@ try:
                 "StatusRaw": sample.status_raw,
                 "USBLoggingStatusRaw": sample.usb_logging_status_raw,
                 "UptimeRaw": sample.uptime_raw,
-                "InternalTemperature[K]": sample.internal_temperature_k,
+                "InternalTemperature[°C]": round(sample.internal_temperature_k - 273.15, 2),
+                "PumpTemperature[°C]": round(sample.pump_temperature_raw - 273.15, 2),
                 "PumpTemperatureRaw": sample.pump_temperature_raw,
                 "OutputVoltageRaw": sample.output_voltage_raw,
                 "OutputCurrentRaw": sample.output_current_raw,
@@ -144,6 +145,8 @@ try:
                 "AlarmFlagsRaw": sample.alarm_flags_raw,
                 "TemperatureErrorFlagsRaw": sample.temperature_error_flags_raw,
             }
+            if sample.status != "Unknown":
+                fields["Status"] = sample.status
             if sample.work_time_s is not None:
                 fields["TotalWorkingTime[s]"] = sample.work_time_s
 
@@ -173,6 +176,9 @@ try:
                 )
                 log(
                     f"{msg_il}Uploaded: "
+                    f"Uptime[s]={sample.uptime_raw!r}, "
+                    f"Status={sample.status}, "
+                    f"PumpTemperature[°C]={fields['PumpTemperature[°C]']!r}, "
                     f"OutputCurrent[A]={fields['OutputCurrent[A]']!r}, "
                     f"OutputVoltage[V]={fields['OutputVoltage[V]']!r}, and more."
                 )

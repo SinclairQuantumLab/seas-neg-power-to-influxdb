@@ -67,6 +67,13 @@ class SourceSample:
     temperature_error_flags_raw: int
     work_time_s: int | None
 
+    @property
+    def status(self) -> str:
+        """Name recovered device states; Manager's synthetic Offline is not a code."""
+        return {2: "Standby", 3: "Ramp", 4: "Steady", 5: "Alarm"}.get(
+            self.status_raw, "Unknown"
+        )
+
 
 def _uint32(words: list[int], offset: int) -> int:
     """Combine the vendor's low-address low word and following high word."""
