@@ -4,7 +4,8 @@ command="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -
 directory="%(ENV_USERPROFILE)s\Projects\seas-neg-power-to-influxdb"
 process_name=%(program_name)s
 autostart=true
-startsecs=5
+; Longer than persistent connection-failure exit (~20 s at 1 s polling / 3 s timeout).
+startsecs=30
 startretries=5
 autorestart=unexpected
 stdout_logfile=%(here)s\logs\%(program_name)s_out.log

@@ -1,7 +1,7 @@
 # Copy to settings.toml and configure the actual NEG POWER MINI.
 
 # Seconds between polling-cycle start times.
-interval_s = 30
+interval_s = 1
 
 # Controller hostname or IP address; confirm the Ethernet Modbus TCP port.
 host = "<HOST>"

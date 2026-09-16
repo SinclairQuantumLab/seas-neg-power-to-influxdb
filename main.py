@@ -194,7 +194,7 @@ try:
                 f"{type(ex).__name__}: {ex}"
             )
             if lifetime_exception_count >= EX_THRESHOLD:
-                log_error("Exception threshold reached. Raising to supervisor.")
+                log_error("Exception threshold reached. Exiting with error.")
                 raise
 
         if ARGS.once:
