@@ -1,0 +1,43 @@
+[project]
+name = "seas-neg-power-to-influxdb"
+version = "0.1.0"
+description = "Read-only SAES NEG POWER relay to InfluxDB; initial MINI support"
+requires-python = ">=3.11"
+dependencies = [
+    "influxdb-client>=1.50.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "ruff>=0.15",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+# Preserve the existing disassembly/emulation research artifact as evidence.
+extend-exclude = ["imaq-secret", "device-docs/research"]
+
+[tool.pytest.ini_options]
+testpaths = [".agents"]
+pythonpath = ["."]
+
+[tool.ruff.lint]
+select = [
+    "ANN",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "I",
+    "UP",
+]

@@ -1,0 +1,15 @@
+# Copy to settings.toml and configure the actual NEG POWER MINI.
+
+# Seconds between polling-cycle start times.
+interval_s = 30
+
+# Controller hostname or IP address; confirm the Ethernet Modbus TCP port.
+host = "<HOST>"
+# port = 502
+
+# Replace with the controller's configured Modbus ID; 1 is an example, not
+# a verified default. This setting is required, including for TCP.
+unit_id = 1
+
+# TCP connection / complete individual Modbus request timeout in seconds.
+timeout_s = 3

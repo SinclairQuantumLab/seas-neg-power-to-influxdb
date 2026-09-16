@@ -1,0 +1,11 @@
+{
+  "vout_v": 12.300000190734863,
+  "iout_a": 4.599999904632568,
+  "temperature_k": 300,
+  "pump_temperature_k": 600,
+  "uptime_raw": 1450709556,
+  "ontime_raw": 3168696474,
+  "rounding_boundary_checks": 24,
+  "method": "Unicorn emulation of original DLL instructions, synthetic register data, no OS calls or device connection",
+  "dll_sha256": "d8d87c5f3ab06d88aa2bcfc3098a129873e8445de7b15bed067d340698071fff"
+}
